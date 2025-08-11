@@ -3,7 +3,7 @@ import '@/utils/globals';
 import { Hono } from 'hono';
 import { APP_PORT } from '@/env';
 import type { PixelColor } from './drizzle';
-import type { ColoredPixels } from '@/utils/common';
+import { type ColoredPixels, CACHE_MAX_AGE, CANVAS_SIZE } from '@/utils/common';
 
 import { auth } from '@/auth';
 import { cors } from 'hono/cors';
@@ -231,37 +231,44 @@ app.get('/tiles/:tile/render', async c => {
     const grid = await reconstructGrid(tile);
     if (grid.length === 0) return c.body(null, 404);
 
-    const canvas = createCanvas(1000, 1000);
+    const canvas = createCanvas(CANVAS_SIZE, CANVAS_SIZE);
     const ctx = canvas.getContext('2d');
 
-    ctx.fillStyle = '#FFFFFF';
-    ctx.fillRect(0, 0, 1000, 1000);
-
-    const imageData = ctx.createImageData(1000, 1000);
+    const imageData = ctx.createImageData(CANVAS_SIZE, CANVAS_SIZE);
     const data = imageData.data;
 
-    for (const entry of grid) {
-      const parts = entry.split(',');
-      if (parts.length !== 3) continue;
+    const batchSize = Math.min(grid.length, 10000);
+    for (let i = 0; i < grid.length; i += batchSize) {
+      const batch = grid.slice(i, i + batchSize);
 
-      const [xStr, yStr, colorStr] = parts;
-      if (!xStr || !yStr || !colorStr) continue;
+      for (const entry of batch) {
+        const firstComma = entry.indexOf(',');
+        const secondComma = entry.indexOf(',', firstComma + 1);
 
-      const x = parseInt(xStr);
-      const y = parseInt(yStr);
-      const colorEnum = colorStr === 'null' ? null : parseInt(colorStr);
+        if (firstComma === -1 || secondComma === -1) continue;
 
-      if (Number.isNaN(x) || Number.isNaN(y)) continue;
-      if (colorStr !== 'null' && Number.isNaN(colorEnum)) continue;
+        const xStr = entry.slice(0, firstComma);
+        const yStr = entry.slice(firstComma + 1, secondComma);
+        const colorStr = entry.slice(secondComma + 1);
 
-      if (x >= 0 && x < 1000 && y >= 0 && y < 1000) {
-        const index = (y * 1000 + x) * 4;
+        if (!xStr || !yStr || !colorStr) continue;
+
+        const x = parseInt(xStr, 10);
+        const y = parseInt(yStr, 10);
+
+        if (x < 0 || x >= 1000 || y < 0 || y >= 1000) continue;
+        if (Number.isNaN(x) || Number.isNaN(y)) continue;
+
+        const colorEnum = colorStr === 'null' ? null : parseInt(colorStr, 10);
+        if (colorStr !== 'null' && Number.isNaN(colorEnum)) continue;
+
+        const index = (y * 1000 + x) << 2;
         const [r, g, b, a] = colorEnumToRGBA(colorEnum);
 
-        data[index] = r; // red
-        data[index + 1] = g; // green
-        data[index + 2] = b; // blue
-        data[index + 3] = a; // alpha
+        data[index] = r;
+        data[index + 1] = g;
+        data[index + 2] = b;
+        data[index + 3] = a;
       }
     }
 
@@ -270,11 +277,11 @@ app.get('/tiles/:tile/render', async c => {
 
     c.header('Content-Type', 'image/png');
     c.header('Content-Length', pngBuffer.length.toString());
-    c.header('Cache-Control', 'public, max-age=3600');
+    c.header('Cache-Control', `public, max-age=${CACHE_MAX_AGE}`);
 
     return c.body(pngBuffer);
   } catch (error) {
-    console.error(error);
+    console.error('Failed to generate PNG for tile:', tile, error);
     return c.json({ error: 'failed to generate PNG' }, 500);
   }
 });

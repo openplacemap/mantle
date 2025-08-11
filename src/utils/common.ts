@@ -111,3 +111,5 @@ export function colorEnumToRGBA(colorEnum: number | null): RGBA {
 
 // constants
 export const CHUNK_SIZE = 10;
+export const CANVAS_SIZE = 1000;
+export const CACHE_MAX_AGE = 3600;
