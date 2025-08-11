@@ -1,0 +1,197 @@
+<!doctype html>
+<html>
+  <body>
+    <input type="text" id="urlInput" placeholder="Enter URL like http://localhost:3000/tiles/327/790" style="width: 400px" />
+    <button onclick="loadGrid()">Load pixels</button>
+    <div id="status"></div>
+    <div id="filesize"></div>
+    <canvas id="canvas" width="1000" height="1000"></canvas>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
+
+    <script>
+      const canvas = document.getElementById('canvas');
+      const ctx = canvas.getContext('2d');
+      const status = document.getElementById('status');
+      const filesize = document.getElementById('filesize');
+
+      function unzz(n) {
+        return (n >>> 1) ^ -(n & 1);
+      }
+
+      function* iteratePixels(buffer) {
+        const data = new Uint32Array(buffer);
+        let i = 0;
+
+        while (i < data.length) {
+          const type = data[i++];
+          const color = data[i++];
+
+          if (type === 0) {
+            const [x1, y1, x2, y2] = [data[i++], data[i++], data[i++], data[i++]];
+            for (let y = y1; y <= y2; y++) {
+              for (let x = x1; x <= x2; x++) {
+                yield { x, y, color };
+              }
+            }
+          } else if (type === 1) {
+            const pixelCount = data[i++];
+            for (let j = 0; j < pixelCount; j++) {
+              const encoded = data[i++];
+              const y = Math.floor(encoded / 1000);
+              const x = encoded % 1000;
+              yield { x, y, color };
+            }
+          } else if (type === 2) {
+            const x1 = data[i++],
+              y1 = data[i++];
+            const x2 = x1 + unzz(data[i++]);
+            const y2 = y1 + unzz(data[i++]);
+            for (let y = y1; y <= y2; y++) {
+              for (let x = x1; x <= x2; x++) {
+                yield { x, y, color };
+              }
+            }
+          } else if (type === 3) {
+            const pixelCount = data[i++];
+            let x = data[i++],
+              y = data[i++];
+            yield { x, y, color };
+            for (let j = 1; j < pixelCount; j++) {
+              x += unzz(data[i++]);
+              y += unzz(data[i++]);
+              yield { x, y, color };
+            }
+          }
+        }
+      }
+
+      const colors = [
+        '#000000',
+        '#3c3c3c',
+        '#787878',
+        '#aaaaaa',
+        '#d2d2d2',
+        '#ffffff',
+        '#600018',
+        '#a50e1e',
+        '#ed1c24',
+        '#fa8072',
+        '#e45c1a',
+        '#ff7f27',
+        '#f6aa09',
+        '#f9dd3b',
+        '#fffabc',
+        '#9c8431',
+        '#c5ad31',
+        '#e8d45f',
+        '#4a6b3a',
+        '#5a944a',
+        '#84c573',
+        '#0eb968',
+        '#13e67b',
+        '#87ff5e',
+        '#0c816e',
+        '#10aea6',
+        '#13e1be',
+        '#0f799f',
+        '#60f7f2',
+        '#bbfaf2',
+        '#28509e',
+        '#4093e4',
+        '#7dc7ff',
+        '#4d31b8',
+        '#6b50f6',
+        '#99b1fb',
+        '#4a4284',
+        '#7a71c4',
+        '#b5aef1',
+        '#780c99',
+        '#aa38b9',
+        '#e09ff9',
+        '#cb007a',
+        '#ec1f80',
+        '#f38da9',
+        '#9b5249',
+        '#d18078',
+        '#fab6a4',
+        '#684634',
+        '#95682a',
+        '#dba463',
+        '#7b6352',
+        '#9c846b',
+        '#d6b594',
+        '#d18051',
+        '#f8b277',
+        '#ffc5a5',
+        '#6d643f',
+        '#948c6b',
+        '#cdc59e',
+        '#333941',
+        '#6d758d',
+        '#b3b9d1',
+        'transparent'
+      ];
+
+      function getColor(index) {
+        if (index >= colors.length) return '#808080';
+        return colors[index] === 'transparent' ? '#F0F0F0' : colors[index];
+      }
+
+      async function loadGrid() {
+        const url = document.getElementById('urlInput').value.trim();
+        if (!url) return;
+
+        status.textContent = 'Loading...';
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        try {
+          const totalStart = performance.now();
+          const fetchStart = performance.now();
+
+          const response = await fetch(url);
+          if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+
+          const compressedBuffer = await response.arrayBuffer();
+          const fetchEnd = performance.now();
+
+          const compressedSize = compressedBuffer.byteLength;
+          const compressedKB = (compressedSize / 1024).toFixed(1);
+          const compressedMB = (compressedSize / (1024 * 1024)).toFixed(2);
+
+          const decodeStart = performance.now();
+          const buffer = pako.ungzip(new Uint8Array(compressedBuffer)).buffer;
+
+          const uncompressedSize = buffer.byteLength;
+          const uncompressedKB = (uncompressedSize / 1024).toFixed(1);
+          const uncompressedMB = (uncompressedSize / (1024 * 1024)).toFixed(2);
+
+          let pixelCount = 0;
+          ctx.fillStyle = '#F0F0F0';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+          for (const { x, y, color } of iteratePixels(buffer)) {
+            ctx.fillStyle = getColor(color);
+            ctx.fillRect(x, y, 1, 1);
+            pixelCount++;
+          }
+          const decodeEnd = performance.now();
+          const totalEnd = decodeEnd;
+
+          status.textContent = `Loaded ${pixelCount} pixels | Fetch: ${(fetchEnd - fetchStart).toFixed(1)} ms | Decode: ${(decodeEnd - decodeStart).toFixed(1)} ms | Total: ${(totalEnd - totalStart).toFixed(1)} ms`;
+
+          filesize.textContent = `Compressed size: ${compressedSize} bytes (${compressedKB} KB, ${compressedMB} MB) | Uncompressed size: ${uncompressedSize} bytes (${uncompressedKB} KB, ${uncompressedMB} MB)`;
+        } catch (error) {
+          status.textContent = `Error: ${error.message}`;
+          filesize.textContent = '';
+        }
+      }
+
+      document.getElementById('urlInput').addEventListener('keypress', e => {
+        if (e.key === 'Enter') loadGrid();
+      });
+
+      document.getElementById('urlInput').value = 'http://localhost:3000/tiles/327/790';
+    </script>
+  </body>
+</html>
