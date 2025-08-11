@@ -1,6 +1,7 @@
 import type { Batch, PixelColor } from '@/drizzle';
 import { CHUNK_SIZE, type ColoredPixels, type Batches } from '@/utils/common';
 
+import { sql } from 'drizzle-orm';
 import { pixels, db } from '@/drizzle';
 import { generateSnowflake } from '@/utils/snowflake';
 import { eq, and, lte, gte, gt, desc } from 'drizzle-orm';
@@ -48,7 +49,7 @@ export const createMixedBatch = (data: Omit<MixedBatch<BatchRequest>, 'type'>) =
 });
 
 export async function getAllBatchesForTile(tile: number) {
-  return await db.select().from(pixels.batches).where(eq(pixels.batches.tile, tile)).orderBy(pixels.batches.version);
+  return await db.select().from(pixels.batches).where(eq(pixels.batches.tile, tile)).orderBy(pixels.batches.id);
 }
 
 export async function getRecentActivity(limit: number = 100) {
@@ -59,12 +60,29 @@ export async function getUserRecentActivity(userId: bigint, limit: number = 50) 
   return await db.select().from(pixels.batches).where(eq(pixels.batches.userId, userId)).orderBy(desc(pixels.batches.id)).limit(limit);
 }
 
-export async function getChangesSinceVersion(tile: number, sinceVersion: number) {
+export async function getChangesSinceVersion(tile: number, sinceVersion: bigint) {
   return await db
     .select()
     .from(pixels.batches)
-    .where(and(eq(pixels.batches.tile, tile), gt(pixels.batches.version, sinceVersion)))
-    .orderBy(pixels.batches.version);
+    .where(and(eq(pixels.batches.tile, tile), gt(pixels.batches.id, sinceVersion)))
+    .orderBy(pixels.batches.id);
+}
+
+/* safe: uses drizzle-orm to injection */
+export async function getLatestStateForTile(tile: number) {
+  const query = sql`
+    WITH latest_batches AS (
+      SELECT DISTINCT ON (tile, type, x1, y1, x2, y2, pixels) 
+        id, "user_id", type, tile, color, x1, y1, x2, y2, pixels
+      FROM batches 
+      WHERE tile = ${tile}
+      ORDER BY tile, type, x1, y1, x2, y2, pixels, id DESC
+    )
+    SELECT * FROM latest_batches
+    ORDER BY id DESC
+  `;
+
+  return await db.execute(query);
 }
 
 export async function getBatchesSinceTime(timestamp: Date, tile?: number) {

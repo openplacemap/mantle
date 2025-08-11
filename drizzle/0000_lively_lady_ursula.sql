@@ -60,7 +60,6 @@ CREATE TABLE "batches" (
 	"user_id" bigint NOT NULL,
 	"type" "batch_type" NOT NULL,
 	"tile" smallint NOT NULL,
-	"version" integer NOT NULL,
 	"color" "color" NOT NULL,
 	"x1" smallint,
 	"y1" smallint,
@@ -72,7 +71,6 @@ CREATE TABLE "batches" (
 ALTER TABLE "account" ADD CONSTRAINT "account_user_id_user_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("user_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "session" ADD CONSTRAINT "session_user_id_user_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("user_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "batches" ADD CONSTRAINT "batches_user_id_user_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("user_id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-CREATE INDEX "batch_id_idx" ON "batches" USING btree ("id");--> statement-breakpoint
-CREATE INDEX "batch_tile_version_idx" ON "batches" USING btree ("tile","version");--> statement-breakpoint
+CREATE INDEX "batch_tile_version_idx" ON "batches" USING btree ("tile");--> statement-breakpoint
 CREATE INDEX "batch_user_tile_type_idx" ON "batches" USING btree ("user_id","tile","type");--> statement-breakpoint
-CREATE INDEX "batch_spatial_version_idx" ON "batches" USING btree ("tile","x1","y1","x2","y2","version");
+CREATE INDEX "batch_spatial_version_idx" ON "batches" USING btree ("tile","x1","y1","x2","y2");

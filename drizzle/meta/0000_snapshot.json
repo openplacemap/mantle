@@ -1,5 +1,5 @@
 {
-  "id": "f296f69d-ea72-4607-84ee-2ef31b285a78",
+  "id": "50e45579-3e17-4c58-b4db-4bf9f01722e1",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -370,12 +370,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "version": {
-          "name": "version",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
         "color": {
           "name": "color",
           "type": "color",
@@ -415,32 +409,11 @@
         }
       },
       "indexes": {
-        "batch_id_idx": {
-          "name": "batch_id_idx",
-          "columns": [
-            {
-              "expression": "id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
         "batch_tile_version_idx": {
           "name": "batch_tile_version_idx",
           "columns": [
             {
               "expression": "tile",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "version",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -507,12 +480,6 @@
             },
             {
               "expression": "y2",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "version",
               "isExpression": false,
               "asc": true,
               "nulls": "last"

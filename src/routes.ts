@@ -1,3 +1,5 @@
+import '@/utils/globals';
+
 import { Hono } from 'hono';
 import { APP_PORT } from '@/env';
 import type { PixelColor } from './drizzle';
@@ -130,14 +132,9 @@ app.get('/tiles/:tile', async c => {
 
   try {
     const grid = await reconstructGrid(tile);
-    if (grid.size === 0) return c.body(null, 404);
+    if (grid.length === 0) return c.body(null, 404);
 
-    const gridEntries: string[] = [];
-    for (const [coords, colorEnum] of grid.entries()) {
-      gridEntries.push(`${coords},${colorEnum}`);
-    }
-
-    return c.text(gridEntries.join(' '));
+    return c.text(grid.join(' '));
   } catch (error) {
     console.error(error);
     return c.json({ error: 'failed to export grid' }, 500);
@@ -170,7 +167,7 @@ app.get('/tiles/:tile/changes', async c => {
   if (Number.isNaN(tile)) return c.json({ error: 'invalid tile number' }, 400);
   if (!sinceVersionParam) return c.json({ error: 'since version required' }, 400);
 
-  const sinceVersion = parseInt(sinceVersionParam);
+  const sinceVersion = BigInt(sinceVersionParam);
   if (Number.isNaN(sinceVersion)) return c.json({ error: 'invalid since version' }, 400);
 
   try {
@@ -309,10 +306,6 @@ app.post('/pixels/debug', async c => {
     defaultColor: PixelColor;
   }>();
   try {
-    BigInt.prototype.toJSON = function () {
-      return this.toString();
-    };
-
     const batches = createOptimalBatches({
       userId: 0n,
       pixels: body.pixels,

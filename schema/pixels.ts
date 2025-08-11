@@ -18,8 +18,6 @@ export const batches = pgTable(
 
     type: batchTypeEnum().notNull(),
     tile: smallint().notNull(),
-
-    version: integer().notNull(),
     color: colorEnum().notNull(),
 
     // region-based fields
@@ -32,9 +30,8 @@ export const batches = pgTable(
     pixels: integer().array()
   },
   table => [
-    index('batch_id_idx').on(table.id),
-    index('batch_tile_version_idx').on(table.tile, table.version),
+    index('batch_tile_version_idx').on(table.tile),
     index('batch_user_tile_type_idx').on(table.userId, table.tile, table.type),
-    index('batch_spatial_version_idx').on(table.tile, table.x1, table.y1, table.x2, table.y2, table.version)
+    index('batch_spatial_version_idx').on(table.tile, table.x1, table.y1, table.x2, table.y2)
   ]
 );
