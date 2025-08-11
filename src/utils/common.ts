@@ -1,4 +1,9 @@
+import { colorEnum } from '#schema/pixels';
 import type { PixelColor } from '@/drizzle';
+
+export const CHUNK_SIZE = 10;
+export const CANVAS_SIZE = 1000;
+export const COLOR_ARRAY = colorEnum.enumValues;
 
 export type RGBA = [number, number, number, number];
 
@@ -54,61 +59,22 @@ export function isCompleteRectangle(pixels: Pixels, bounds: Bounds): boolean {
   return pixels.length === expectedPixels;
 }
 
-export function colorToEnumNumber(color: PixelColor): number {
-  const colorMap: Record<PixelColor, number> = {
-    white: 0,
-    black: 1,
-    red: 2,
-    orange: 3,
-    yellow: 4,
-    green: 5,
-    blue: 6,
-    purple: 7,
-    pink: 8,
-    blank: 9
-  };
-
-  return colorMap[color] ?? 9;
+export function getIndexFromHex(hex: PixelColor): number | null {
+  const index = COLOR_ARRAY.indexOf(hex);
+  return index !== -1 ? index : null;
 }
 
-function getColorFromEnum(colorEnum: number | null): PixelColor {
-  if (colorEnum === null) return 'blank';
+export function colorEnumToRGBA(colorIndex: number | null): RGBA {
+  if (colorIndex === null) {
+    return [0, 0, 0, 0];
+  }
 
-  const enumToColor: Record<number, PixelColor> = {
-    0: 'white',
-    1: 'black',
-    2: 'red',
-    3: 'orange',
-    4: 'yellow',
-    5: 'green',
-    6: 'blue',
-    7: 'purple',
-    8: 'pink',
-    9: 'blank'
-  };
+  const hex = colorEnum.enumValues[colorIndex] ?? 'transparent';
+  if (hex === 'transparent') return [0, 0, 0, 0];
 
-  return enumToColor[colorEnum] || 'blank';
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+
+  return [r, g, b, 255];
 }
-
-export function colorEnumToRGBA(colorEnum: number | null): RGBA {
-  const color = getColorFromEnum(colorEnum);
-
-  const colorMap: Record<PixelColor, RGBA> = {
-    white: [255, 255, 255, 255],
-    black: [0, 0, 0, 255],
-    red: [255, 0, 0, 255],
-    orange: [255, 165, 0, 255],
-    yellow: [255, 255, 0, 255],
-    green: [0, 128, 0, 255],
-    blue: [0, 0, 255, 255],
-    purple: [128, 0, 128, 255],
-    pink: [255, 192, 203, 255],
-    blank: [0, 0, 0, 0]
-  };
-
-  return colorMap[color];
-}
-
-// constants
-export const CHUNK_SIZE = 10;
-export const CANVAS_SIZE = 1000;

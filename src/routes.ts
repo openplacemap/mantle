@@ -2,12 +2,12 @@ import '@/utils/globals';
 
 import { Hono } from 'hono';
 import { APP_PORT } from '@/env';
-import type { PixelColor } from './drizzle';
+import type { PixelColor } from '@/drizzle';
 import { type ColoredPixels, CANVAS_SIZE } from '@/utils/common';
 
+import sharp from 'sharp';
 import { auth } from '@/auth';
 import { cors } from 'hono/cors';
-import { createCanvas } from 'canvas';
 import { reconstructGrid } from '@/utils/grid';
 import { colorEnumToRGBA } from '@/utils/common';
 import { isValidSnowflake } from '@/utils/snowflake';
@@ -110,14 +110,14 @@ app.post('/pixels', async c => {
   // migrate to zod
   const body = await c.req.json<{
     pixels: ColoredPixels;
-    defaultColor: PixelColor;
+    defaultColor?: PixelColor;
   }>();
 
   try {
     await insertOptimalBatches({
       userId,
       pixels: body.pixels,
-      color: body.defaultColor
+      color: body?.defaultColor
     });
 
     return c.body(null, 200);
@@ -231,11 +231,7 @@ app.get('/tiles/:tile/render', async c => {
     const grid = await reconstructGrid(tile);
     if (grid.length === 0) return c.body(null, 404);
 
-    const canvas = createCanvas(CANVAS_SIZE, CANVAS_SIZE);
-    const ctx = canvas.getContext('2d');
-
-    const imageData = ctx.createImageData(CANVAS_SIZE, CANVAS_SIZE);
-    const data = imageData.data;
+    const buffer = Buffer.alloc(CANVAS_SIZE * CANVAS_SIZE * 4, 0);
 
     for (const entry of grid) {
       const parts = entry.split(',');
@@ -246,28 +242,34 @@ app.get('/tiles/:tile/render', async c => {
 
       const x = parseInt(xStr);
       const y = parseInt(yStr);
-      const colorEnum = colorStr === 'null' ? null : parseInt(colorStr);
+      const colorIndex = colorStr === 'null' ? null : parseInt(colorStr);
 
       if (Number.isNaN(x) || Number.isNaN(y)) continue;
-      if (colorStr !== 'null' && Number.isNaN(colorEnum)) continue;
+      if (colorStr !== 'null' && Number.isNaN(colorIndex)) continue;
 
-      if (x >= 0 && x < 1000 && y >= 0 && y < 1000) {
-        const index = (y * 1000 + x) * 4;
-        const [r, g, b, a] = colorEnumToRGBA(colorEnum);
+      if (x >= 0 && x < CANVAS_SIZE && y >= 0 && y < CANVAS_SIZE) {
+        const index = (y * CANVAS_SIZE + x) * 4;
+        const [r, g, b, a] = colorEnumToRGBA(colorIndex);
 
-        data[index] = r; // red
-        data[index + 1] = g; // green
-        data[index + 2] = b; // blue
-        data[index + 3] = a; // alpha
+        buffer[index] = r; // red
+        buffer[index + 1] = g; // green
+        buffer[index + 2] = b; // blue
+        buffer[index + 3] = a; // alpha
       }
     }
 
-    ctx.putImageData(imageData, 0, 0);
-    const pngBuffer = canvas.toBuffer('image/png');
+    const pngBuffer = await sharp(buffer, {
+      raw: {
+        width: CANVAS_SIZE,
+        height: CANVAS_SIZE,
+        channels: 4
+      }
+    })
+      .png()
+      .toBuffer();
 
     c.header('Content-Type', 'image/png');
     c.header('Content-Length', pngBuffer.length.toString());
-    // c.header('Cache-Control', 'public, max-age=3600');
 
     return c.body(pngBuffer);
   } catch (error) {
@@ -370,13 +372,13 @@ app.post('/pixels/debug', async c => {
   // migrate to zod
   const body = await c.req.json<{
     pixels: ColoredPixels;
-    defaultColor: PixelColor;
+    defaultColor?: PixelColor;
   }>();
   try {
     const batches = createOptimalBatches({
       userId: 0n,
       pixels: body.pixels,
-      color: body.defaultColor
+      color: body?.defaultColor
     });
 
     return c.json({ batchCount: batches.length, batches: batches });
