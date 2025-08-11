@@ -59,13 +59,8 @@ export function isCompleteRectangle(pixels: Pixels, bounds: Bounds): boolean {
   return pixels.length === expectedPixels;
 }
 
-export function getIndexFromHex(hex: PixelColor): number | null {
-  const index = COLOR_ARRAY.indexOf(hex);
-  return index !== -1 ? index : null;
-}
-
-export function colorEnumToRGBA(colorIndex: number | null): RGBA {
-  if (colorIndex === null) {
+export function colorEnumToRGBA(colorIndex?: number): RGBA {
+  if (!colorIndex) {
     return [0, 0, 0, 0];
   }
 
@@ -78,3 +73,19 @@ export function colorEnumToRGBA(colorIndex: number | null): RGBA {
 
   return [r, g, b, 255];
 }
+
+export function writePixel(buffer: Buffer<ArrayBuffer>, px: number, py: number, rgba: RGBA) {
+  if (px < 0 || py < 0 || px >= CANVAS_SIZE || py >= CANVAS_SIZE) return;
+  const idx = (py * CANVAS_SIZE + px) * 4;
+
+  buffer[idx] = rgba[0];
+  buffer[idx + 1] = rgba[1];
+  buffer[idx + 2] = rgba[2];
+  buffer[idx + 3] = rgba[3];
+}
+
+export const zz = (n: number) => (n << 1) ^ (n >> 31);
+
+export const toTileId = (x: number, y: number) => y * 4096 + x;
+
+export const getIndexFromHex = (hex: PixelColor) => COLOR_ARRAY.indexOf(hex) ?? COLOR_ARRAY.indexOf('transparent');

@@ -78,12 +78,12 @@ export async function getLatestStateForTile(tile: number) {
         id, "user_id", type, tile, color, x1, y1, x2, y2, pixels
       FROM batches 
       WHERE tile = ${tile}
+        AND color != 'transparent'
       ORDER BY tile, type, x1, y1, x2, y2, pixels, id DESC
     )
     SELECT * FROM latest_batches
     ORDER BY id DESC
   `;
-
   return await db.execute(query);
 }
 

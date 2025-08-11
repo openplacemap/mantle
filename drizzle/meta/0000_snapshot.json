@@ -1,5 +1,5 @@
 {
-  "id": "a310606e-bc3f-4876-b677-42fb57526e9e",
+  "id": "2f09c928-fd91-469e-b159-9cc73b2a607d",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -366,7 +366,7 @@
         },
         "tile": {
           "name": "tile",
-          "type": "smallint",
+          "type": "integer",
           "primaryKey": false,
           "notNull": true
         },

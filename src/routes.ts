@@ -8,9 +8,10 @@ import { type ColoredPixels, CANVAS_SIZE } from '@/utils/common';
 import sharp from 'sharp';
 import { auth } from '@/auth';
 import { cors } from 'hono/cors';
-import { reconstructGrid } from '@/utils/grid';
-import { colorEnumToRGBA } from '@/utils/common';
+import { compress } from '@hono/bun-compress';
 import { isValidSnowflake } from '@/utils/snowflake';
+import { colorEnumToRGBA, toTileId, writePixel } from '@/utils/common';
+import { reconstructGrid, reconstructGridPacked } from '@/utils/grid';
 
 import {
   getRegionsInArea,
@@ -29,6 +30,8 @@ const app = new Hono<{
     session: typeof auth.$Infer.Session.session | null;
   };
 }>();
+
+app.use(compress({ encoding: 'gzip' }));
 
 app.use(
   cors({
@@ -127,16 +130,16 @@ app.post('/pixels', async c => {
   }
 });
 
-app.get('/tiles/:tile', async c => {
+app.get('/tiles/:x/:y', async c => {
   // migrate to zod
-  const tile = parseInt(c.req.param('tile'));
-  if (Number.isNaN(tile)) return c.json({ error: 'invalid tile number' }, 400);
+  const x = parseInt(c.req.param('x'));
+  const y = parseInt(c.req.param('y'));
+
+  const id = toTileId(x, y);
 
   try {
-    const grid = await reconstructGrid(tile);
-    if (grid.length === 0) return c.body(null, 404);
-
-    return c.text(grid.join(' '));
+    const grid = await reconstructGridPacked(id);
+    return c.body(grid);
   } catch (error) {
     console.error(error);
     return c.json({ error: 'failed to export grid' }, 500);
@@ -222,58 +225,79 @@ app.get('/tiles/:tile/regions', async c => {
   }
 });
 
-app.get('/tiles/:tile/render', async c => {
+app.get('/tiles/:x/:y/render', async c => {
   // migrate to zod
-  const tile = parseInt(c.req.param('tile'));
-  if (Number.isNaN(tile)) return c.json({ error: 'invalid tile number' }, 400);
+  const x = parseInt(c.req.param('x'));
+  const y = parseInt(c.req.param('y'));
 
+  const id = toTileId(x, y);
   try {
-    const grid = await reconstructGrid(tile);
-    if (grid.length === 0) return c.body(null, 404);
+    const cmdBuffer = await reconstructGrid(id);
+    const u32 = new Uint32Array(cmdBuffer);
+    if (u32.length === 0) return c.body(null, 404);
 
-    const buffer = Buffer.alloc(CANVAS_SIZE * CANVAS_SIZE * 4, 0);
+    const buffer = Buffer.allocUnsafe(CANVAS_SIZE * CANVAS_SIZE * 4);
+    buffer.fill(0);
 
-    for (const entry of grid) {
-      const parts = entry.split(',');
-      if (parts.length !== 3) continue;
+    let i = 0;
+    // biome-ignore-start lint/style/noNonNullAssertion: performance
+    while (i < u32.length) {
+      const opcode = u32[i++];
 
-      const [xStr, yStr, colorStr] = parts;
-      if (!xStr || !yStr || !colorStr) continue;
+      if (opcode === 0) {
+        const colorIndex = u32[i++];
 
-      const x = parseInt(xStr);
-      const y = parseInt(yStr);
-      const colorIndex = colorStr === 'null' ? null : parseInt(colorStr);
+        const x1 = u32[i++]!,
+          y1 = u32[i++]!,
+          x2 = u32[i++]!,
+          y2 = u32[i++]!;
 
-      if (Number.isNaN(x) || Number.isNaN(y)) continue;
-      if (colorStr !== 'null' && Number.isNaN(colorIndex)) continue;
+        const rgba = colorEnumToRGBA(colorIndex);
+        const minX = Math.max(0, Math.min(x1, x2));
+        const maxX = Math.min(CANVAS_SIZE - 1, Math.max(x1, x2));
+        const minY = Math.max(0, Math.min(y1, y2));
+        const maxY = Math.min(CANVAS_SIZE - 1, Math.max(y1, y2));
 
-      if (x >= 0 && x < CANVAS_SIZE && y >= 0 && y < CANVAS_SIZE) {
-        const index = (y * CANVAS_SIZE + x) * 4;
-        const [r, g, b, a] = colorEnumToRGBA(colorIndex);
+        for (let yy = minY; yy <= maxY; yy++) {
+          let idx = (yy * CANVAS_SIZE + minX) * 4;
+          for (let xx = minX; xx <= maxX; xx++) {
+            buffer[idx] = rgba[0];
+            buffer[idx + 1] = rgba[1];
+            buffer[idx + 2] = rgba[2];
+            buffer[idx + 3] = rgba[3];
+            idx += 4;
+          }
+        }
+      } else if (opcode === 1) {
+        const colorIndex = u32[i++];
+        const count = u32[i++]!;
+        const rgba = colorEnumToRGBA(colorIndex);
 
-        buffer[index] = r; // red
-        buffer[index + 1] = g; // green
-        buffer[index + 2] = b; // blue
-        buffer[index + 3] = a; // alpha
+        for (let k = 0; k < count; k++) {
+          const encoded = u32[i++]!;
+
+          const py = Math.floor(encoded / CANVAS_SIZE);
+          const px = encoded % CANVAS_SIZE;
+
+          writePixel(buffer, px, py, rgba);
+        }
+      } else {
+        throw new Error(`unknown opcode ${opcode} at index ${i - 1}`);
       }
     }
+    // biome-ignore-end lint/style/noNonNullAssertion: performance
 
     const pngBuffer = await sharp(buffer, {
-      raw: {
-        width: CANVAS_SIZE,
-        height: CANVAS_SIZE,
-        channels: 4
-      }
+      raw: { width: CANVAS_SIZE, height: CANVAS_SIZE, channels: 4 }
     })
       .png()
       .toBuffer();
 
     c.header('Content-Type', 'image/png');
     c.header('Content-Length', pngBuffer.length.toString());
-
     return c.body(pngBuffer);
-  } catch (error) {
-    console.error(error);
+  } catch (err) {
+    console.error(err);
     return c.json({ error: 'failed to generate PNG' }, 500);
   }
 });

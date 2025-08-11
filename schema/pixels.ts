@@ -83,7 +83,7 @@ export const batches = pgTable(
       .references(() => user.id),
 
     type: batchTypeEnum().notNull(),
-    tile: smallint().notNull(),
+    tile: integer().notNull(),
     color: colorEnum().notNull(),
 
     // region-based fields
