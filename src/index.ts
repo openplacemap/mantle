@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { APP_PORT } from '@/env';
 
 import { auth } from '@/auth';
 import { cors } from 'hono/cors';
@@ -36,6 +37,15 @@ app.use('*', async (c, next) => {
   return next();
 });
 
+app.notFound(c => {
+  return c.text('not found :(', 404);
+});
+
+app.onError((error, c) => {
+  console.error(error);
+  return c.text('something went wrong :(', 500);
+});
+
 app.on(['POST', 'GET'], '/api/auth/*', c => {
   return auth.handler(c.req.raw);
 });
@@ -52,4 +62,7 @@ app.get('/api', c => {
   return c.text('hello openplace!');
 });
 
-export default app;
+export default {
+  port: APP_PORT,
+  fetch: app.fetch
+};
