@@ -1,6 +1,11 @@
 # backend
 
-## routes
+## note for frontend
 
-`/api/session`
-`/api/auth/<route>`
+```js
+import { createAuthClient } from 'better-auth/react';
+
+export const authClient = createAuthClient({
+  baseURL: 'https://oplace.ws/auth'
+});
+```
