@@ -1,3 +1,4 @@
+import { user } from '#schema/auth';
 import { generateSnowflake } from '@/utils/snowflake';
 import { pgTable, index, serial, bigint, smallint, pgEnum } from 'drizzle-orm/pg-core';
 
@@ -13,7 +14,7 @@ export const batches = pgTable(
 
     userId: bigint({ mode: 'bigint' })
       .notNull()
-      .references(() => auth.user.id),
+      .references(() => user.id),
 
     type: batchTypeEnum().notNull(),
     tile: smallint().notNull(),
