@@ -1,9 +1,11 @@
 import { Hono } from 'hono';
 import { APP_PORT } from '@/env';
+import type { PixelColor } from './drizzle';
 import type { ColoredPixels } from '@/utils/common';
 
 import { auth } from '@/auth';
 import { cors } from 'hono/cors';
+import { reconstructGrid } from '@/utils/grid';
 import { isValidSnowflake } from '@/utils/snowflake';
 
 import {
@@ -102,15 +104,43 @@ app.post('/pixels', async c => {
   if (!userId) return c.json({ error: 'invalid snowflake' }, 400);
 
   // migrate to zod
-  const pixels = await c.req.json<ColoredPixels>();
+  const body = await c.req.json<{
+    pixels: ColoredPixels;
+    defaultColor: PixelColor;
+  }>();
 
   try {
-    // 'color' is the default color if the body does not contain any colors
-    await insertOptimalBatches({ userId, pixels, color: 'black' });
+    await insertOptimalBatches({
+      userId,
+      pixels: body.pixels,
+      color: body.defaultColor
+    });
+
     return c.body(null, 200);
   } catch (error) {
     console.error(error);
     return c.json({ error: 'failed to insert batches' }, 500);
+  }
+});
+
+app.get('/tiles/:tile', async c => {
+  // migrate to zod
+  const tile = parseInt(c.req.param('tile'));
+  if (Number.isNaN(tile)) return c.json({ error: 'invalid tile number' }, 400);
+
+  try {
+    const grid = await reconstructGrid(tile);
+    if (grid.size === 0) return c.body(null, 404);
+
+    const gridEntries: string[] = [];
+    for (const [coords, colorEnum] of grid.entries()) {
+      gridEntries.push(`${coords},${colorEnum}`);
+    }
+
+    return c.text(gridEntries.join(' '));
+  } catch (error) {
+    console.error(error);
+    return c.json({ error: 'failed to export grid' }, 500);
   }
 });
 
@@ -269,15 +299,26 @@ app.get('/batches/since', async c => {
   }
 });
 
-app.post('/debug/preview', async c => {
+app.post('/pixels/debug', async c => {
   const user = c.get('user');
   if (!user) return c.body(null, 401);
 
   // migrate to zod
-  const pixels = await c.req.json<ColoredPixels>();
-
+  const body = await c.req.json<{
+    pixels: ColoredPixels;
+    defaultColor: PixelColor;
+  }>();
   try {
-    const batches = createOptimalBatches({ userId: 0n, pixels, color: 'black' });
+    BigInt.prototype.toJSON = function () {
+      return this.toString();
+    };
+
+    const batches = createOptimalBatches({
+      userId: 0n,
+      pixels: body.pixels,
+      color: body.defaultColor
+    });
+
     return c.json({ batchCount: batches.length, batches: batches });
   } catch (error) {
     console.error(error);

@@ -1,5 +1,5 @@
 {
-  "id": "c489cc42-3e92-402e-b3db-5fef45a17487",
+  "id": "ff79b14d-ec63-47d8-bb81-bdd1432d5294",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -409,7 +409,7 @@
         },
         "pixels": {
           "name": "pixels",
-          "type": "smallint[]",
+          "type": "integer[]",
           "primaryKey": false,
           "notNull": false
         }

@@ -66,7 +66,7 @@ CREATE TABLE "batches" (
 	"y1" smallint,
 	"x2" smallint,
 	"y2" smallint,
-	"pixels" smallint[]
+	"pixels" integer[]
 );
 --> statement-breakpoint
 ALTER TABLE "account" ADD CONSTRAINT "account_user_id_user_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("user_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint

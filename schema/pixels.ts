@@ -1,6 +1,6 @@
 import { user } from '#schema/auth';
 import { generateSnowflake } from '@/utils/snowflake';
-import { pgTable, index, serial, bigint, smallint, pgEnum } from 'drizzle-orm/pg-core';
+import { pgTable, index, serial, bigint, smallint, integer, pgEnum } from 'drizzle-orm/pg-core';
 
 export const batchTypeEnum = pgEnum('batch_type', ['region', 'pixels', 'mixed']);
 export const colorEnum = pgEnum('color', ['white', 'black', 'red', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', 'blank']);
@@ -29,7 +29,7 @@ export const batches = pgTable(
     y2: smallint(),
 
     // individual pixels
-    pixels: smallint().array()
+    pixels: integer().array()
   },
   table => [
     index('batch_id_idx').on(table.id),

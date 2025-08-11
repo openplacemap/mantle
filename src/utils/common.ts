@@ -52,5 +52,22 @@ export function isCompleteRectangle(pixels: Pixels, bounds: Bounds): boolean {
   return pixels.length === expectedPixels;
 }
 
+export function colorToEnumNumber(color: PixelColor): number {
+  const colorMap: Record<PixelColor, number> = {
+    white: 0,
+    black: 1,
+    red: 2,
+    orange: 3,
+    yellow: 4,
+    green: 5,
+    blue: 6,
+    purple: 7,
+    pink: 8,
+    blank: 9
+  };
+
+  return colorMap[color] ?? 9;
+}
+
 // constants
 export const CHUNK_SIZE = 10;
