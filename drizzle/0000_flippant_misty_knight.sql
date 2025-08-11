@@ -60,7 +60,7 @@ CREATE TABLE "batches" (
 	"user_id" bigint NOT NULL,
 	"type" "batch_type" NOT NULL,
 	"tile" smallint NOT NULL,
-	"version" serial NOT NULL,
+	"version" integer NOT NULL,
 	"color" "color" NOT NULL,
 	"x1" smallint,
 	"y1" smallint,
