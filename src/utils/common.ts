@@ -1,5 +1,7 @@
 import type { PixelColor } from '@/drizzle';
 
+export type RGBA = [number, number, number, number];
+
 export type Pixels = Array<{
   x: number;
   y: number;
@@ -67,6 +69,44 @@ export function colorToEnumNumber(color: PixelColor): number {
   };
 
   return colorMap[color] ?? 9;
+}
+
+function getColorFromEnum(colorEnum: number | null): PixelColor {
+  if (colorEnum === null) return 'blank';
+
+  const enumToColor: Record<number, PixelColor> = {
+    0: 'white',
+    1: 'black',
+    2: 'red',
+    3: 'orange',
+    4: 'yellow',
+    5: 'green',
+    6: 'blue',
+    7: 'purple',
+    8: 'pink',
+    9: 'blank'
+  };
+
+  return enumToColor[colorEnum] || 'blank';
+}
+
+export function colorEnumToRGBA(colorEnum: number | null): RGBA {
+  const color = getColorFromEnum(colorEnum);
+
+  const colorMap: Record<PixelColor, RGBA> = {
+    white: [255, 255, 255, 255],
+    black: [0, 0, 0, 255],
+    red: [255, 0, 0, 255],
+    orange: [255, 165, 0, 255],
+    yellow: [255, 255, 0, 255],
+    green: [0, 128, 0, 255],
+    blue: [0, 0, 255, 255],
+    purple: [128, 0, 128, 255],
+    pink: [255, 192, 203, 255],
+    blank: [0, 0, 0, 0]
+  };
+
+  return colorMap[color];
 }
 
 // constants

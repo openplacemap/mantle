@@ -7,7 +7,9 @@ import type { ColoredPixels } from '@/utils/common';
 
 import { auth } from '@/auth';
 import { cors } from 'hono/cors';
+import { createCanvas } from 'canvas';
 import { reconstructGrid } from '@/utils/grid';
+import { colorEnumToRGBA } from '@/utils/common';
 import { isValidSnowflake } from '@/utils/snowflake';
 
 import {
@@ -217,6 +219,63 @@ app.get('/tiles/:tile/regions', async c => {
   } catch (error) {
     console.error(error);
     return c.json({ error: 'failed to fetch regions' }, 500);
+  }
+});
+
+app.get('/tiles/:tile/render', async c => {
+  // migrate to zod
+  const tile = parseInt(c.req.param('tile'));
+  if (Number.isNaN(tile)) return c.json({ error: 'invalid tile number' }, 400);
+
+  try {
+    const grid = await reconstructGrid(tile);
+    if (grid.length === 0) return c.body(null, 404);
+
+    const canvas = createCanvas(1000, 1000);
+    const ctx = canvas.getContext('2d');
+
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0, 0, 1000, 1000);
+
+    const imageData = ctx.createImageData(1000, 1000);
+    const data = imageData.data;
+
+    for (const entry of grid) {
+      const parts = entry.split(',');
+      if (parts.length !== 3) continue;
+
+      const [xStr, yStr, colorStr] = parts;
+      if (!xStr || !yStr || !colorStr) continue;
+
+      const x = parseInt(xStr);
+      const y = parseInt(yStr);
+      const colorEnum = colorStr === 'null' ? null : parseInt(colorStr);
+
+      if (Number.isNaN(x) || Number.isNaN(y)) continue;
+      if (colorStr !== 'null' && Number.isNaN(colorEnum)) continue;
+
+      if (x >= 0 && x < 1000 && y >= 0 && y < 1000) {
+        const index = (y * 1000 + x) * 4;
+        const [r, g, b, a] = colorEnumToRGBA(colorEnum);
+
+        data[index] = r; // red
+        data[index + 1] = g; // green
+        data[index + 2] = b; // blue
+        data[index + 3] = a; // alpha
+      }
+    }
+
+    ctx.putImageData(imageData, 0, 0);
+    const pngBuffer = canvas.toBuffer('image/png');
+
+    c.header('Content-Type', 'image/png');
+    c.header('Content-Length', pngBuffer.length.toString());
+    c.header('Cache-Control', 'public, max-age=3600');
+
+    return c.body(pngBuffer);
+  } catch (error) {
+    console.error(error);
+    return c.json({ error: 'failed to generate PNG' }, 500);
   }
 });
 
