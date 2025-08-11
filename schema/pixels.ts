@@ -3,7 +3,7 @@ import { generateSnowflake } from '@/utils/snowflake';
 import { pgTable, index, serial, bigint, smallint, pgEnum } from 'drizzle-orm/pg-core';
 
 export const batchTypeEnum = pgEnum('batch_type', ['region', 'pixels', 'mixed']);
-export const colorEnum = pgEnum('color', ['white', 'black', 'red', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink']);
+export const colorEnum = pgEnum('color', ['white', 'black', 'red', 'orange', 'yellow', 'green', 'blue', 'purple', 'pink', 'blank']);
 
 export const batches = pgTable(
   'batches',

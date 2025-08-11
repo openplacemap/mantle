@@ -13,8 +13,9 @@ export const auth = betterAuth({
   //   }
   // },
 
+  // keep this on for now to allow testing
   emailAndPassword: {
-    enabled: false
+    enabled: true
   },
 
   database: drizzleAdapter(db, {

@@ -1,8 +1,11 @@
 import { Hono } from 'hono';
 import { APP_PORT } from '@/env';
+import type { ColoredPixels } from '@/utils/common';
 
 import { auth } from '@/auth';
 import { cors } from 'hono/cors';
+import { isValidSnowflake } from '@/utils/snowflake';
+import { insertOptimalBatches } from '@/utils/pixel';
 
 const app = new Hono<{
   Variables: {
@@ -12,11 +15,10 @@ const app = new Hono<{
 }>();
 
 app.use(
-  '/api/auth/*',
   cors({
     origin: '*', // replace with our origin later
     allowHeaders: ['Content-Type', 'Authorization'],
-    allowMethods: ['POST', 'GET', 'OPTIONS'],
+    allowMethods: ['GET', 'POST', 'OPTIONS'],
     exposeHeaders: ['Content-Length'],
     maxAge: 600,
     credentials: true
@@ -46,11 +48,11 @@ app.onError((error, c) => {
   return c.text('something went wrong :(', 500);
 });
 
-app.on(['POST', 'GET'], '/api/auth/*', c => {
+app.on(['POST', 'GET'], '/auth/*', c => {
   return auth.handler(c.req.raw);
 });
 
-app.get('/api/session', c => {
+app.get('/session', c => {
   const session = c.get('session');
   const user = c.get('user');
 
@@ -58,7 +60,27 @@ app.get('/api/session', c => {
   return c.json({ session, user });
 });
 
-app.get('/api', c => {
+app.post('/pixels', async c => {
+  const user = c.get('user');
+  if (!user) return c.body(null, 401);
+
+  const userId = isValidSnowflake(user.id) ? BigInt(user.id) : null;
+  if (!userId) return c.json({ error: 'invalid snowflake' }, 400);
+
+  // use zod validator later
+  const pixels = await c.req.json<ColoredPixels>();
+
+  try {
+    // 'color' is the default color if the body does not contain any colors
+    await insertOptimalBatches({ userId, pixels, color: 'black' });
+    return c.body(null, 200);
+  } catch (error) {
+    console.error(error);
+    return c.body(null, 500);
+  }
+});
+
+app.get('/', c => {
   return c.text('hello openplace!');
 });
 
