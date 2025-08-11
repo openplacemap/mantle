@@ -60,11 +60,13 @@ export async function getUserRecentActivity(userId: bigint, limit: number = 50) 
   return await db.select().from(pixels.batches).where(eq(pixels.batches.userId, userId)).orderBy(desc(pixels.batches.id)).limit(limit);
 }
 
-export async function getChangesSinceVersion(tile: number, sinceVersion: bigint) {
+export async function getChangesSinceTime(timestamp: Date, tile: number) {
+  const snowflakeAtTime = generateSnowflake({ timestamp });
+
   return await db
     .select()
     .from(pixels.batches)
-    .where(and(eq(pixels.batches.tile, tile), gt(pixels.batches.id, sinceVersion)))
+    .where(and(eq(pixels.batches.tile, tile), gt(pixels.batches.id, snowflakeAtTime)))
     .orderBy(pixels.batches.id);
 }
 

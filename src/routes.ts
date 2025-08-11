@@ -16,7 +16,7 @@ import {
   getAllBatchesForTile,
   getRecentActivity,
   getUserRecentActivity,
-  getChangesSinceVersion,
+  getChangesSinceTime,
   getBatchesSinceTime,
   createOptimalBatches
 } from '@/utils/pixel';
@@ -160,18 +160,24 @@ app.get('/tiles/:tile/batches', async c => {
 });
 
 app.get('/tiles/:tile/changes', async c => {
-  // migrate to zod
+  // migrate all to zod
   const tile = parseInt(c.req.param('tile'));
-  const sinceVersionParam = c.req.query('since');
+  const timestampParam = c.req.query('timestamp');
 
-  if (Number.isNaN(tile)) return c.json({ error: 'invalid tile number' }, 400);
-  if (!sinceVersionParam) return c.json({ error: 'since version required' }, 400);
+  if (!timestampParam) return c.json({ error: 'timestamp required' }, 400);
 
-  const sinceVersion = BigInt(sinceVersionParam);
-  if (Number.isNaN(sinceVersion)) return c.json({ error: 'invalid since version' }, 400);
+  const timestampNum = parseInt(timestampParam);
+  if (Number.isNaN(timestampNum)) {
+    return c.json({ error: 'invalid timestamp format' }, 400);
+  }
+
+  const timestamp = new Date(timestampNum);
+  if (Number.isNaN(timestamp.getTime())) {
+    return c.json({ error: 'invalid timestamp format' }, 400);
+  }
 
   try {
-    const changes = await getChangesSinceVersion(tile, sinceVersion);
+    const changes = await getChangesSinceTime(timestamp, tile);
     if (changes.length === 0) {
       return c.json({ error: 'no changes found' }, 400);
     }
@@ -272,7 +278,12 @@ app.get('/batches/since', async c => {
   if (!timestampParam) return c.json({ error: 'timestamp required' }, 400);
 
   // migrate to zod
-  const timestamp = new Date(timestampParam);
+  const timestampNum = parseInt(timestampParam);
+  if (Number.isNaN(timestampNum)) {
+    return c.json({ error: 'invalid timestamp format' }, 400);
+  }
+
+  const timestamp = new Date(timestampNum);
   if (Number.isNaN(timestamp.getTime())) {
     return c.json({ error: 'invalid timestamp format' }, 400);
   }
