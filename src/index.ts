@@ -5,7 +5,7 @@ import type { ColoredPixels } from '@/utils/common';
 import { auth } from '@/auth';
 import { cors } from 'hono/cors';
 import { isValidSnowflake } from '@/utils/snowflake';
-import { insertOptimalBatches } from '@/utils/pixel';
+import { insertOptimalBatches, getAllBatchesForTile } from '@/utils/pixel';
 
 const app = new Hono<{
   Variables: {
@@ -76,7 +76,20 @@ app.post('/pixels', async c => {
     return c.body(null, 200);
   } catch (error) {
     console.error(error);
-    return c.body(null, 500);
+    return c.json({ error: 'failed to insert batches' }, 500);
+  }
+});
+
+app.get('/tiles/:tile/batches', async c => {
+  const tile = parseInt(c.req.param('tile'));
+  if (Number.isNaN(tile)) return c.json({ error: 'invalid tile number' }, 400);
+
+  try {
+    const batches = await getAllBatchesForTile(tile);
+    return c.json(batches);
+  } catch (error) {
+    console.error(error);
+    return c.json({ error: 'failed to fetch batches' }, 500);
   }
 });
 
