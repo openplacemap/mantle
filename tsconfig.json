@@ -1,7 +1,18 @@
 {
   "compilerOptions": {
     "strict": true,
+    "allowJs": true,
+    "skipLibCheck": true,
+    "noImplicitAny": false,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "noUncheckedIndexedAccess": true,
     "jsx": "react-jsx",
-    "jsxImportSource": "hono/jsx"
+    "jsxImportSource": "hono/jsx",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "#schema*": ["./schema/*"]
+    }
   }
 }
