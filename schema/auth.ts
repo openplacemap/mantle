@@ -5,7 +5,7 @@ import { pgTable, text, bigint, timestamp, boolean } from 'drizzle-orm/pg-core';
 
 export const user = pgTable('user', {
   /* manually modified to add snowflake support */
-  id: bigint({ mode: 'bigint' })
+  id: bigint('user_id', { mode: 'bigint' })
     .primaryKey()
     .$defaultFn(() => /* @__PURE__ */ generateSnowflake()),
 

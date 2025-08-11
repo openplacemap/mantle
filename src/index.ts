@@ -86,6 +86,10 @@ app.get('/tiles/:tile/batches', async c => {
 
   try {
     const batches = await getAllBatchesForTile(tile);
+    if (batches.length === 0) {
+      return c.json({ error: 'empty tile' }, 400);
+    }
+
     return c.json(batches);
   } catch (error) {
     console.error(error);

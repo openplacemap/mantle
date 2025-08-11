@@ -1,5 +1,5 @@
 {
-  "id": "9d35640c-ec6c-441e-bbbf-47338685b5f7",
+  "id": "c489cc42-3e92-402e-b3db-5fef45a17487",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -26,8 +26,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "userId": {
-          "name": "userId",
+        "user_id": {
+          "name": "user_id",
           "type": "bigint",
           "primaryKey": false,
           "notNull": true
@@ -89,15 +89,15 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "account_userId_user_id_fk": {
-          "name": "account_userId_user_id_fk",
+        "account_user_id_user_user_id_fk": {
+          "name": "account_user_id_user_user_id_fk",
           "tableFrom": "account",
           "tableTo": "user",
           "columnsFrom": [
-            "userId"
+            "user_id"
           ],
           "columnsTo": [
-            "id"
+            "user_id"
           ],
           "onDelete": "cascade",
           "onUpdate": "no action"
@@ -192,8 +192,8 @@
           "primaryKey": false,
           "notNull": false
         },
-        "userId": {
-          "name": "userId",
+        "user_id": {
+          "name": "user_id",
           "type": "bigint",
           "primaryKey": false,
           "notNull": true
@@ -201,15 +201,15 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "session_userId_user_id_fk": {
-          "name": "session_userId_user_id_fk",
+        "session_user_id_user_user_id_fk": {
+          "name": "session_user_id_user_user_id_fk",
           "tableFrom": "session",
           "tableTo": "user",
           "columnsFrom": [
-            "userId"
+            "user_id"
           ],
           "columnsTo": [
-            "id"
+            "user_id"
           ],
           "onDelete": "cascade",
           "onUpdate": "no action"
@@ -233,8 +233,8 @@
       "name": "user",
       "schema": "",
       "columns": {
-        "id": {
-          "name": "id",
+        "user_id": {
+          "name": "user_id",
           "type": "bigint",
           "primaryKey": true,
           "notNull": true
@@ -351,8 +351,8 @@
           "primaryKey": true,
           "notNull": true
         },
-        "userId": {
-          "name": "userId",
+        "user_id": {
+          "name": "user_id",
           "type": "bigint",
           "primaryKey": false,
           "notNull": true
@@ -455,7 +455,7 @@
           "name": "batch_user_tile_type_idx",
           "columns": [
             {
-              "expression": "userId",
+              "expression": "user_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -525,15 +525,15 @@
         }
       },
       "foreignKeys": {
-        "batches_userId_user_id_fk": {
-          "name": "batches_userId_user_id_fk",
+        "batches_user_id_user_user_id_fk": {
+          "name": "batches_user_id_user_user_id_fk",
           "tableFrom": "batches",
           "tableTo": "user",
           "columnsFrom": [
-            "userId"
+            "user_id"
           ],
           "columnsTo": [
-            "id"
+            "user_id"
           ],
           "onDelete": "no action",
           "onUpdate": "no action"
